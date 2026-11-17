@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Railway Platform Allocator | Divide & Conquer + Greedy Strategy</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="logo-wrapper">
+          <img src="logo.png" alt="Railway Platform Allocator Logo" class="brand-logo-img">
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">Railway Platform Allocator</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="backend-status" class="status-pill checking" title="Backend API status">
+          <span class="status-dot"></span>
+          <span class="status-text">Checking API...</span>
+        </div>
+        <button id="theme-toggle" class="icon-button" aria-label="Toggle dark/light mode" title="Toggle Theme">
+          <svg id="theme-icon-dark" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+          </svg>
+          <svg id="theme-icon-light" class="theme-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/>
+            <path d="M12 20v2"/>
+            <path d="m4.93 4.93 1.41 1.41"/>
+            <path d="m17.66 17.66 1.41 1.41"/>
+            <path d="M2 12h2"/>
+            <path d="M20 12h2"/>
+            <path d="m6.34 17.66-1.41 1.41"/>
+            <path d="m19.07 4.93-1.41 1.41"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="container">
+
+      <!-- Test Case Presets Row -->
+      <section class="presets-section">
+        <div class="presets-card">
+          <div class="presets-header">
+            <svg class="presets-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            <span class="presets-label">Algorithm Test Presets:</span>
+          </div>
+          <div class="presets-buttons">
+            <button type="button" id="btn-preset-best" class="btn btn-preset" title="Sequential non-overlapping trains (Min Platforms = 1)">
+              <span class="preset-tag tag-green">Best Case</span>
+              <span>No Overlap (1 Plat)</span>
+            </button>
+            <button type="button" id="btn-preset-worst" class="btn btn-preset" title="All trains arrive and halt simultaneously (Min Platforms = N)">
+              <span class="preset-tag tag-red">Worst Case</span>
+              <span>All Overlap (N Plat)</span>
+            </button>
+            <div class="random-generator-group">
+              <span class="random-label">Random Case:</span>
+              <div class="random-controls">
+                <select id="random-count-select" class="form-select">
+                  <option value="10">10 Trains</option>
+                  <option value="50">50 Trains</option>
+                  <option value="100">100 Trains</option>
+                  <option value="500">500 Trains</option>
+                </select>
+                <button type="button" id="btn-preset-random" class="btn btn-preset-action">
+                  <span>Generate</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top Two-Column Grid: Add Train Form & Trains List -->
+      <section class="planner-grid">
+        <!-- Card 1: Add Train -->
+        <div class="card add-train-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="section-icon text-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <div>
+                <h2 class="card-title">Add Train Schedule</h2>
+                <p class="card-desc">Enter arrival and departure times (24-hour)</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <!-- Inline Error Message Area -->
+            <div id="form-error" class="alert-box alert-error hidden" role="alert">
+              <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span id="form-error-text">Error message goes here</span>
+            </div>
+
+            <form id="train-form" novalidate>
+              <div class="form-group">
+                <label for="train-name" class="form-label">Train Number / Name</label>
+                <div class="input-wrapper">
+                  <input type="text" id="train-name" class="form-control" placeholder="e.g. 12951 Rajdhani Exp" autocomplete="off" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group col-half">
+                  <label for="train-arrival" class="form-label">Arrival Time</label>
+                  <div class="input-wrapper">
+                    <input type="time" id="train-arrival" class="form-control" required>
+                  </div>
+                </div>
+
+                <div class="form-group col-half">
+                  <label for="train-departure" class="form-label">Departure Time</label>
+                  <div class="input-wrapper">
+                    <input type="time" id="train-departure" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="button-stack">
+                <button type="submit" id="btn-add-train" class="btn btn-primary">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  <span>Add Train</span>
+                </button>
+
+                <div class="button-row">
+                  <button type="button" id="btn-load-sample" class="btn btn-secondary" title="Load Indian Railways sample of 10 trains">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                      <path d="M6 6h10"/>
+                      <path d="M6 10h10"/>
+                    </svg>
+                    <span>Load Sample Data (10 trains)</span>
+                  </button>
+
+                  <button type="button" id="btn-clear-all" class="btn btn-danger-outline" title="Clear all scheduled trains">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    <span>Clear All</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Card 2: Trains List -->
+        <div class="card train-list-card">
+          <div class="card-header justify-between">
+            <div class="card-title-group">
+              <svg class="section-icon text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              <div>
+                <h2 class="card-title">Scheduled Trains</h2>
+                <p class="card-desc">Current batch to be sorted &amp; allocated</p>
+              </div>
+            </div>
+            <span id="train-counter-badge" class="badge badge-neutral">0 Trains</span>
+          </div>
+
+          <div class="card-body no-padding scrollable-table-wrapper">
+            <!-- Empty state when no trains exist -->
+            <div id="trains-empty-state" class="empty-state">
+              <div class="empty-icon-wrapper">
+                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="4" y="3" width="16" height="16" rx="2"/>
+                  <path d="M4 11h16"/>
+                  <path d="M12 3v8"/>
+                  <path d="m8 19-3 3"/>
+                  <path d="m16 19 3 3"/>
+                  <circle cx="8" cy="15" r="1.5"/>
+                  <circle cx="16" cy="15" r="1.5"/>
+                </svg>
+              </div>
+              <h3 class="empty-title">No trains added yet</h3>
+              <p class="empty-text">Add a train above, click <strong>Load Sample Data</strong>, or choose a preset.</p>
+            </div>
+
+            <!-- Table of added trains -->
+            <table id="trains-table" class="data-table hidden">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">No.</th>
+                  <th>Train Name</th>
+                  <th>Arrival</th>
+                  <th>Departure</th>
+                  <th style="width: 70px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="trains-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Run Action Button Section -->
+      <section class="action-section">
+        <button id="btn-run-allocation" class="btn btn-run">
+          <svg class="btn-icon-large" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span class="btn-run-label">Run Allocation</span>
+        </button>
+        <p class="action-hint">Executes Divide &amp; Conquer (Merge Sort) + Greedy Platform Allocation</p>
+        <div id="fallback-notice" class="fallback-pill hidden">
+          <span class="pulse-dot"></span>
+          <span>Backend offline &bull; Running in-browser JavaScript Divide &amp; Conquer + Greedy Engine</span>
+        </div>
+      </section>
+
+      <!-- Results Section (Initially Hidden) -->
+      <section id="results-section" class="results-section hidden">
+        <!-- Verification Banner -->
+        <div id="verification-banner" class="verification-banner">
+          <div class="verification-content">
+            <div class="verification-badge-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div class="verification-text-group">
+              <div class="verification-headline">
+                <span class="verification-title">Algorithm Verification Passed</span>
+                <span id="verification-match-tag" class="tag tag-success">Sorting method = Two-pointer method</span>
+              </div>
+              <p id="verification-detail" class="verification-detail">
+                Greedy Platform Strategy: <strong>2</strong> platforms &bull; Two-Pointer Overlap Scan: <strong>2</strong> platforms &bull; Optimal match confirmed.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Stat Cards -->
+        <div class="stats-grid">
+          <div class="stat-card stat-platforms">
+            <div class="stat-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Minimum Platforms Required</span>
+              <span id="stat-min-platforms" class="stat-value">0</span>
+              <span class="stat-sub">Collision-free allocation</span>
+            </div>
+          </div>
+
+          <div class="stat-card stat-trains">
+            <div class="stat-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="3" width="16" height="16" rx="2"/>
+                <path d="M4 11h16"/>
+                <path d="M12 3v8"/>
+                <circle cx="8" cy="15" r="1"/>
+                <circle cx="16" cy="15" r="1"/>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Trains Scheduled</span>
+              <span id="stat-total-trains" class="stat-value">0</span>
+              <span class="stat-sub">Sorted via Merge Sort</span>
+            </div>
+          </div>
+
+          <div class="stat-card stat-halt">
+            <div class="stat-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Average Halt Time</span>
+              <span id="stat-avg-halt" class="stat-value">0 min</span>
+              <span class="stat-sub">Station dwell duration</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step-by-Step Playback Card (With Pseudocode Panel Beside It) -->
+        <div class="card playback-card">
+          <div class="card-header justify-between">
+            <div class="card-title-group">
+              <svg class="section-icon text-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="10 8 16 12 10 16 10 8"/>
+              </svg>
+              <div>
+                <h3 class="card-title">Step-by-Step Greedy Allocation Walkthrough</h3>
+                <p class="card-desc">Simulate greedy platform choices one train at a time</p>
+              </div>
+            </div>
+            <span id="playback-step-counter" class="badge badge-neutral">Step 0 of 0</span>
+          </div>
+          <div class="card-body">
+            <div class="playback-grid">
+              <!-- Left: Playback Controls & Narrative -->
+              <div class="playback-controls-pane">
+                <div class="playback-buttons-bar">
+                  <button type="button" id="btn-playback-prev" class="btn btn-playback" title="Previous train">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+                    <span>Previous</span>
+                  </button>
+                  <button type="button" id="btn-playback-play" class="btn btn-playback-primary" title="Play / Pause automatic walkthrough">
+                    <svg id="playback-play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <svg id="playback-pause-icon" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    <span id="playback-play-text">Play</span>
+                  </button>
+                  <button type="button" id="btn-playback-next" class="btn btn-playback" title="Next train">
+                    <span>Next</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                  </button>
+                  <button type="button" id="btn-playback-reset" class="btn btn-playback" title="Reset to start">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>Reset</span>
+                  </button>
+                </div>
+
+                <div class="playback-explanation-card">
+                  <div class="explanation-badge-row">
+                    <span id="playback-train-tag" class="tag tag-train">Waiting to start...</span>
+                    <span id="playback-decision-tag" class="tag tag-neutral">Decision</span>
+                  </div>
+                  <p id="playback-explanation-text" class="playback-explanation">
+                    Click <strong>Next</strong> or <strong>Play</strong> to trace each greedy platform assignment step-by-step.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Right: Algorithm Pseudocode Panel with Active Line Highlighting -->
+              <div class="pseudocode-panel">
+                <div class="pseudocode-header">
+                  <span class="pseudocode-title">Greedy Strategy Pseudocode</span>
+                  <span class="pseudocode-badge">Algorithm Trace</span>
+                </div>
+                <div class="pseudocode-code" id="pseudocode-lines">
+                  <div class="code-line" data-line="1"><span class="line-num">1</span><span class="code-text"><span class="kw">Sort</span> trains by arrival time using <span class="fn">MergeSort</span>(trains)</span></div>
+                  <div class="code-line" data-line="2"><span class="line-num">2</span><span class="code-text"><span class="kw">For each</span> train <span class="var">T</span> in sorted_trains:</span></div>
+                  <div class="code-line" data-line="3"><span class="line-num">3</span><span class="code-text">&nbsp;&nbsp;<span class="var">p</span> &larr; <span class="fn">FindFirstPlatform</span>(last_departure &le; T.arrival)</span></div>
+                  <div class="code-line" data-line="4"><span class="line-num">4</span><span class="code-text">&nbsp;&nbsp;<span class="kw">If</span> <span class="var">p</span> exists: <span class="fn">Reuse</span> platform <span class="var">p</span>; update last_departure</span></div>
+                  <div class="code-line" data-line="5"><span class="line-num">5</span><span class="code-text">&nbsp;&nbsp;<span class="kw">Else</span>: <span class="fn">OpenNewPlatform</span>(); assign to <span class="var">T</span></span></div>
+                  <div class="code-line" data-line="6"><span class="line-num">6</span><span class="code-text"><span class="kw">Return</span> total platforms opened <span class="comment">// Optimal Minimum</span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Merge Sort View (Divide and Conquer Visualization - Collapsed by Default) -->
+        <div class="card merge-sort-card">
+          <div class="card-header justify-between cursor-pointer" id="merge-sort-header">
+            <div class="card-title-group">
+              <svg class="section-icon text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="5" r="3"/>
+                <line x1="12" y1="8" x2="6" y2="14"/>
+                <line x1="12" y1="8" x2="18" y2="14"/>
+                <circle cx="6" cy="17" r="3"/>
+                <circle cx="18" cy="17" r="3"/>
+              </svg>
+              <div>
+                <h3 class="card-title">Divide &amp; Conquer: Merge Sort View</h3>
+                <p class="card-desc">Visualizes recursive splitting into halves and merging back in sorted arrival order</p>
+              </div>
+            </div>
+            <button type="button" id="btn-toggle-mergesort" class="btn btn-toggle-collapse">
+              <span id="mergesort-toggle-label">Show Merge Sort Steps</span>
+              <svg id="mergesort-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="card-body hidden" id="merge-sort-body">
+            <div class="mergesort-intro-bar">
+              <span class="mergesort-rule-pill">Split: Halve array recursively</span>
+              <span class="mergesort-rule-pill">Base Case: len &le; 1</span>
+              <span class="mergesort-rule-pill">Merge: Combine sorted halves in O(n)</span>
+            </div>
+            <div id="mergesort-tree-container" class="mergesort-tree-container">
+              <!-- Dynamically populated merge sort stages -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Platform Timeline (Gantt-style) Card with Peak-Load Marker -->
+        <div class="card timeline-card">
+          <div class="card-header justify-between">
+            <div class="card-title-group">
+              <svg class="section-icon text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="4" y1="12" x2="16" y2="12"/>
+                <line x1="4" y1="18" x2="18" y2="18"/>
+              </svg>
+              <div>
+                <h3 class="card-title">Platform Gantt Timeline</h3>
+                <p class="card-desc">Visual occupancy per platform (With Peak Load Time Marker &bull; Click any bar to highlight everywhere)</p>
+              </div>
+            </div>
+            <div class="timeline-legend" id="timeline-legend">
+              <!-- Dynamically populated platform color chips -->
+            </div>
+          </div>
+          <div class="card-body">
+            <!-- Timeline Toolbar: Peak Indicator & Zoom Controls -->
+            <div class="timeline-toolbar">
+              <div id="peak-indicator-bar" class="peak-indicator-bar">
+                <div class="peak-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  <span>Peak Traffic Window: <strong id="peak-time-val">06:00</strong> (<span id="peak-trains-val">0</span> simultaneous trains)</span>
+                </div>
+              </div>
+
+              <div class="timeline-zoom-controls">
+                <span class="zoom-label">Timeline Spacing:</span>
+                <div class="zoom-btn-group">
+                  <button type="button" id="btn-zoom-out" class="btn-zoom" title="Zoom out / more compact">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                  <button type="button" id="btn-zoom-reset" class="btn-zoom-mode active" title="Comfortable spacing">Comfortable</button>
+                  <button type="button" id="btn-zoom-fit" class="btn-zoom-mode" title="Fit to card width">Fit to Screen</button>
+                  <button type="button" id="btn-zoom-in" class="btn-zoom" title="Zoom in / more spacious">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-scroll-container" id="timeline-scroll-container">
+              <div id="timeline-wrapper" class="timeline-wrapper">
+                <!-- Time Scale Axis -->
+                <div id="timeline-axis" class="timeline-axis"></div>
+                <!-- Platform Tracks / Lanes -->
+                <div id="timeline-tracks" class="timeline-tracks">
+                  <!-- Peak Line Vertical Indicator dynamically attached -->
+                </div>
+              </div>
+            </div>
+            <div class="timeline-footer-hint">
+              <span class="hint-icon">&harr;</span>
+              <span>Scroll horizontally to view full schedule. Click any train bar to highlight everywhere.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Allocation Table Card -->
+        <div class="card allocation-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg class="section-icon text-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <div>
+                <h3 class="card-title">Detailed Platform Allocation Table</h3>
+                <p class="card-desc">Final platform schedule sorted chronologically</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-body no-padding scrollable-table-wrapper">
+            <table class="data-table" id="allocation-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">Seq</th>
+                  <th>Train Name</th>
+                  <th>Arrival Time</th>
+                  <th>Departure Time</th>
+                  <th>Halt (Duration)</th>
+                  <th style="width: 140px; text-align: center;">Assigned Platform</th>
+                </tr>
+              </thead>
+              <tbody id="allocation-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- "How the Algorithm Works" Educational Section -->
+      <section class="card algorithm-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div>
+              <h2 class="card-title">How the Algorithm Works</h2>
+              <p class="card-desc">Design and Analysis of Algorithms &bull; Divide and Conquer + Greedy Strategy</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="algorithm-steps-grid">
+            <!-- Step 1 -->
+            <div class="step-card">
+              <div class="step-badge">1</div>
+              <h4 class="step-title">Divide &amp; Conquer: Merge Sort</h4>
+              <p class="step-text">
+                The input train list is recursively halved into subproblems, sorted at the base case, and merged in ascending order of arrival time: <code>O(n log n)</code> in all cases. Ties are broken by departure time.
+              </p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-card">
+              <div class="step-badge">2</div>
+              <h4 class="step-title">Greedy Platform Reuse</h4>
+              <p class="step-text">
+                For each incoming train, scan active platforms in order. <strong>Reuse the first platform</strong> whose last departure is &le; this train's arrival (<code>last_departure &le; arrival</code>). If no platform is free, open a new platform: <code>O(n &times; p)</code>.
+              </p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-card">
+              <div class="step-badge">3</div>
+              <h4 class="step-title">Optimal Platform Count</h4>
+              <p class="step-text">
+                Total platforms opened equals the exact minimum needed. This is mathematically equal to the maximum number of simultaneous overlapping trains at any point in time, verified via the Two-Pointer peak scan.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Complexity Analysis Card -->
+      <section class="card complexity-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon text-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <div>
+              <h2 class="card-title">Complexity Analysis</h2>
+              <p class="card-desc">Theoretical Best, Average, and Worst Case asymptotic bounds</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body no-padding scrollable-table-wrapper">
+          <table class="data-table complexity-table">
+            <thead>
+              <tr>
+                <th>Algorithm Phase</th>
+                <th>Strategy</th>
+                <th>Best Case Time</th>
+                <th>Average Case Time</th>
+                <th>Worst Case Time</th>
+                <th>Space Complexity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight: 700;">1. Sorting Phase</td>
+                <td><span class="tag tag-teal">Divide &amp; Conquer (Merge Sort)</span></td>
+                <td><code>O(n log n)</code></td>
+                <td><code>O(n log n)</code></td>
+                <td><code>O(n log n)</code></td>
+                <td><code>O(n)</code> (Auxiliary merge buffers)</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700;">2. Platform Allocation</td>
+                <td><span class="tag tag-orange">Greedy Strategy (First-Fit)</span></td>
+                <td><code>O(n)</code> <small style="color:var(--text-muted);">(No overlap, 1 platform)</small></td>
+                <td><code>O(n &times; p)</code> <small style="color:var(--text-muted);">(p &ll; n platforms)</small></td>
+                <td><code>O(n²)</code> <small style="color:var(--text-muted);">(All overlap, p = n)</small></td>
+                <td><code>O(n + p)</code> (Platform registers)</td>
+              </tr>
+              <tr style="background-color: var(--bg-card-subtle);">
+                <td style="font-weight: 800; color: var(--accent-orange);">Complete Pipeline</td>
+                <td><span class="tag tag-purple">Combined D&amp;C + Greedy</span></td>
+                <td><code>O(n log n)</code></td>
+                <td><code>O(n log n + n &times; p)</code></td>
+                <td><code>O(n²)</code></td>
+                <td><code>O(n)</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Interactive Floating Timeline Tooltip -->
+  <div id="timeline-tooltip" class="timeline-tooltip hidden"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
