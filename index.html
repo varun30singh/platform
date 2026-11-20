@@ -511,54 +511,6 @@
         </div>
       </section>
 
-      <!-- "How the Algorithm Works" Educational Section -->
-      <section class="card algorithm-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="section-icon text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <div>
-              <h2 class="card-title">How the Algorithm Works</h2>
-              <p class="card-desc">Design and Analysis of Algorithms &bull; Divide and Conquer + Greedy Strategy</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-body">
-          <div class="algorithm-steps-grid">
-            <!-- Step 1 -->
-            <div class="step-card">
-              <div class="step-badge">1</div>
-              <h4 class="step-title">Divide &amp; Conquer: Merge Sort</h4>
-              <p class="step-text">
-                The input train list is recursively halved into subproblems, sorted at the base case, and merged in ascending order of arrival time: <code>O(n log n)</code> in all cases. Ties are broken by departure time.
-              </p>
-            </div>
-
-            <!-- Step 2 -->
-            <div class="step-card">
-              <div class="step-badge">2</div>
-              <h4 class="step-title">Greedy Platform Reuse</h4>
-              <p class="step-text">
-                For each incoming train, scan active platforms in order. <strong>Reuse the first platform</strong> whose last departure is &le; this train's arrival (<code>last_departure &le; arrival</code>). If no platform is free, open a new platform: <code>O(n &times; p)</code>.
-              </p>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="step-card">
-              <div class="step-badge">3</div>
-              <h4 class="step-title">Optimal Platform Count</h4>
-              <p class="step-text">
-                Total platforms opened equals the exact minimum needed. This is mathematically equal to the maximum number of simultaneous overlapping trains at any point in time, verified via the Two-Pointer peak scan.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Complexity Analysis Card -->
       <section class="card complexity-card">
         <div class="card-header">
